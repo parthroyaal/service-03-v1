@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Volume Button Listener</title>
+</head>
+<body>
+    <h1>Press the volume down button</h1>
+
+    <script>
+        document.addEventListener('keydown', function(event) {
+            // Key codes: 175 = Volume Up, 174 = Volume Down
+            if (event.keyCode === 174) {
+                alert("Hi! You pressed the volume down button.");
+            }
+        });
+    </script>
+</body>
+</html>
+

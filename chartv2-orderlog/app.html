@@ -1,0 +1,116 @@
+<!-- https://www.tailwindai.dev/ -->
+<!-- https://tailwindcss.com/docs/installation/play-cdn -->
+<!-- z -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal h-screen flex items-center justify-center">
+    <div class="bg-white shadow-lg rounded-lg p-8 max-w-3xl w-full">
+      <h1 class="text-2xl font-bold mb-6 text-center">Price Table</h1>
+      <table class="min-w-full border-collapse">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border px-4 py-2 text-left">CallPrice</th>
+            <th class="border px-4 py-2 text-left">SpotPrice</th>
+            <th class="border px-4 py-2 text-left">PutPrice</th>
+          </tr>
+        </thead>
+        <tbody id="priceTable">
+          <tr>
+            <td class="border px-4 py-2" id="callPrice">100</td>
+            <td class="border px-4 py-2" id="spotPrice">100</td>
+            <td class="border px-4 py-2" id="putPrice">100</td>
+          </tr>
+          <tr>
+            <td class="border px-4 py-2">
+              <button class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-400" onclick="buy('callPrice')">Buy</button>
+              <button class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-400" onclick="sell('callPrice')">Sell</button>
+              <div id="callLog" class="mt-2 text-sm text-gray-600"></div>
+              <div id="callChange" class="text-sm text-gray-500">Change: 0%</div>
+            </td>
+            <td class="border px-4 py-2"></td>
+            <td class="border px-4 py-2">
+              <button class="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-400" onclick="buy('putPrice')">Buy</button>
+              <button class="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-400" onclick="sell('putPrice')">Sell</button>
+              <div id="putLog" class="mt-2 text-sm text-gray-600"></div>
+              <div id="putChange" class="text-sm text-gray-500">Change: 0%</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="border px-4 py-2" id="callPrice2">100</td>
+            <td class="border px-4 py-2" id="spotPrice2">100</td>
+            <td class="border px-4 py-2" id="putPrice2">100</td>
+          </tr>
+          <tr>
+            <td class="border px-4 py-2" id="callPrice3">100</td>
+            <td class="border px-4 py-2" id="spotPrice3">100</td>
+            <td class="border px-4 py-2" id="putPrice3">100</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <script>
+      let callEntryPrice = null;
+      let putEntryPrice = null;
+  
+      function getRandomPrice() {
+        return (Math.random() * (102 - 100) + 100).toFixed(2);
+      }
+  
+      function updatePrices() {
+        const callPrice = getRandomPrice();
+        const spotPrice = getRandomPrice();
+        const putPrice = getRandomPrice();
+  
+        document.getElementById('callPrice').innerText = callPrice;
+        document.getElementById('spotPrice').innerText = spotPrice;
+        document.getElementById('putPrice').innerText = putPrice;
+  
+        updatePercentageChange(callPrice, 'callChange', callEntryPrice);
+        updatePercentageChange(spotPrice, 'spotPrice', null);
+        updatePercentageChange(putPrice, 'putChange', putEntryPrice);
+      }
+  
+      function updatePercentageChange(currentPrice, changeId, entryPrice) {
+        if (entryPrice !== null) {
+          const percentChange = ((currentPrice - entryPrice) / entryPrice * 100).toFixed(2);
+          document.getElementById(changeId).innerText = `Change: ${percentChange}%`;
+        } else {
+          document.getElementById(changeId).innerText = `Change: 0%`;
+        }
+      }
+  
+      function buy(priceId) {
+        const price = parseFloat(document.getElementById(priceId).innerText);
+        const logId = priceId === 'callPrice' ? 'callLog' : 'putLog';
+        if (priceId === 'callPrice') {
+          callEntryPrice = price;
+          document.getElementById(logId).innerText = `Bought Call at: $${price}`;
+        } else {
+          putEntryPrice = price;
+          document.getElementById(logId).innerText = `Bought Put at: $${price}`;
+        }
+      }
+  
+      function sell(priceId) {
+        const price = parseFloat(document.getElementById(priceId).innerText);
+        const logId = priceId === 'callPrice' ? 'callLog' : 'putLog';
+        let entryPrice = priceId === 'callPrice' ? callEntryPrice : putEntryPrice;
+        if (entryPrice !== null) {
+          const percentChange = ((price - entryPrice) / entryPrice * 100).toFixed(2);
+          document.getElementById(logId).innerText += ` | Sold at: $${price} | % Change: ${percentChange}%`;
+          if (priceId === 'callPrice') callEntryPrice = null; // Reset entry price after selling
+          else putEntryPrice = null; // Reset entry price after selling
+        }
+      }
+  
+      setInterval(updatePrices, 1000);
+    </script>
+  </body>
+
+</html>

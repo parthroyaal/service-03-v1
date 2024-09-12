@@ -1,0 +1,266 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradingView Advanced Charts with Multiple CSV Data Demo</title>
+    <!-- Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.0/dist/tailwind.min.css" rel="stylesheet">
+    <!-- TradingView Charting Library -->
+    <script type="text/javascript" src="charting_library/charting_library.standalone.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap;
+            width: 100%;
+            height: 100vh;
+        }
+        .chart-wrapper {
+            width: 50%;
+            height: 50%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .chart {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        #formSection {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #chartSection {
+            display: none;
+            height: 100%;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="m-0 p-0">
+    <div id="formSection" class="p-4">
+        <h1 class="text-2xl font-bold mb-4">Select CSV Files for Charts</h1>
+        <form id="csvForm" class="w-full max-w-lg">
+            <div class="mb-4">
+                <label for="leftTop" class="block text-sm font-medium text-gray-700">Left Top Chart (CE Data):</label>
+                <input type="file" id="leftTop" name="leftTop" accept=".csv" class="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100">
+            </div>
+            <div class="mb-4">
+                <label for="rightTop" class="block text-sm font-medium text-gray-700">Right Top Chart (SPOT Data):</label>
+                <input type="file" id="rightTop" name="rightTop" accept=".csv" class="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100">
+            </div>
+            <div class="mb-4">
+                <label for="leftBottom" class="block text-sm font-medium text-gray-700">Left Bottom Chart (PE Data):</label>
+                <input type="file" id="leftBottom" name="leftBottom" accept=".csv" class="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100">
+            </div>
+            <div class="mb-4">
+                <label for="rightBottom" class="block text-sm font-medium text-gray-700">Right Bottom Chart (RHEL Data):</label>
+                <input type="file" id="rightBottom" name="rightBottom" accept=".csv" class="mt-1 block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100">
+            </div>
+        </form>
+        <button id="loadCharts" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Load Charts</button>
+    </div>
+    <div id="chartSection">
+        <div class="chart-container">
+            <div class="chart-wrapper">
+                <div id="chart_left_top" class="chart"></div>
+            </div>
+            <div class="chart-wrapper">
+                <div id="chart_right_top" class="chart"></div>
+            </div>
+            <div class="chart-wrapper">
+                <div id="chart_left_bottom" class="chart"></div>
+            </div>
+            <div class="chart-wrapper">
+                <div id="chart_right_bottom" class="chart"></div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        // Object to store bars for each chart
+        const allBars = {
+            leftTop: [],
+            rightTop: [],
+            leftBottom: [],
+            rightBottom: []
+        };
+
+        async function loadCSVData(file) {
+            const text = await file.text();
+            const rows = text.split('\n');
+            const headers = rows[0].split(',');
+
+            const timeIndex = headers.indexOf('time');
+            const openIndex = headers.indexOf('open');
+            const highIndex = headers.indexOf('high');
+            const lowIndex = headers.indexOf('low');
+            const closeIndex = headers.indexOf('close');
+            const volumeIndex = headers.indexOf('volume');
+
+            let bars = [];
+
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i].split(',');
+                if (row.length === headers.length) {
+                    bars.push({
+                        time: new Date(row[timeIndex]).getTime() / 1000,
+                        open: parseFloat(row[openIndex]),
+                        high: parseFloat(row[highIndex]),
+                        low: parseFloat(row[lowIndex]),
+                        close: parseFloat(row[closeIndex]),
+                        volume: parseInt(row[volumeIndex])
+                    });
+                }
+            }
+
+            return bars;
+        }
+
+        function createChart(containerId, bars, symbol) {
+            let currentBarIndex = 0;
+
+            const widget = new TradingView.widget({
+                fullscreen: false,
+                symbol: symbol,
+                interval: '5S',
+                container: containerId,
+                datafeed: {
+                    onReady: function (callback) {
+                        setTimeout(() => callback({
+                            supported_resolutions: ["5S", "1", "5", "15", "30", "60", "D", "W"],
+                            exchanges: [{ value: "NASDAQ", name: "NASDAQ", desc: "NASDAQ" }],
+                            symbols_types: [{ name: "Stock", value: "stock" }]
+                        }));
+                    },
+                    searchSymbols: function (userInput, exchange, symbolType, onResultReadyCallback) {
+                        onResultReadyCallback([]);
+                    },
+                    resolveSymbol: function (symbolName, onSymbolResolvedCallback, onResolveErrorCallback, extension) {
+                        var symbolInfo = {
+                            name: symbolName,
+                            description: symbolName,
+                            type: 'stock',
+                            session: '24x7',
+                            timezone: 'Asia/Kolkata',
+                            exchange: 'NASDAQ',
+                            minmov: 1,
+                            pricescale: 100,
+                            has_intraday: true,
+                            has_seconds: true,
+                            has_no_volume: false,
+                            has_weekly_and_monthly: false,
+                            supported_resolutions: ["5S", "1", "5", "15", "30", "60", "D", "W"],
+                            volume_precision: 0,
+                            data_status: 'streaming',
+                            seconds_multipliers: ["5"]
+                        };
+                        setTimeout(() => onSymbolResolvedCallback(symbolInfo));
+                    },
+                    getBars: function (symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) {
+                        onHistoryCallback([], { noData: true });
+                    },
+                    subscribeBars: function (symbolInfo, resolution, onRealtimeCallback, subscriberUID, onResetCacheNeededCallback) {
+                        function emitBar() {
+                            if (currentBarIndex < bars.length) {
+                                const bar = { ...bars[currentBarIndex] };
+                                bar.time = bar.time * 1000;
+                                onRealtimeCallback(bar);
+                                currentBarIndex++;
+                                setTimeout(emitBar, 1000);
+                            } else {
+                                currentBarIndex = 0;
+                                setTimeout(emitBar, 1000);
+                            }
+                        }
+                        emitBar();
+                    },
+                    unsubscribeBars: function (subscriberUID) { },
+                    getMarks: function (symbolInfo, from, to, onDataCallback, resolution) { onDataCallback([]); },
+                    getTimescaleMarks: function (symbolInfo, from, to, onDataCallback, resolution) { onDataCallback([]); },
+                    getServerTime: function (callback) { callback(Math.floor(Date.now() / 1000)); }
+                },
+                library_path: "charting_library/",
+                locale: "en",
+                style: "1",
+                width: "100%",
+                height: "100%",
+                theme: "light",
+                timezone: "Asia/Kolkata",
+                toolbar_bg: "#f1f3f6",
+                enable_publishing: false,
+                hide_side_toolbar: false,
+                allow_symbol_change: false
+            });
+
+            widget.onChartReady(() => {
+                const studies = [
+                    { name: "Moving Average", inputs: { length: 12 }, id: "MA12", options: { "plot.linewidth": 3, "plot.color": "#FFFF00" } },
+                    { name: "Moving Average", inputs: { length: 24 }, id: "MA24", options: { "plot.linewidth": 3, "plot.color": "#FF0000" } },
+                    { name: "Moving Average", inputs: { length: 50 }, id: "MA50", options: { "plot.linewidth": 3, "plot.color": "#000000" } },
+                    { name: "Moving Average", inputs: { length: 200 }, id: "MA200", options: { "plot.linewidth": 4, "plot.color": "#0000FF" } }
+                ];
+                
+                studies.forEach(study => {
+                    widget.chart().createStudy(study.name, false, false, study.inputs, study.options, { id: study.id });
+                });
+            });
+
+            return widget;
+        }
+
+        document.getElementById('loadCharts').addEventListener('click', async function () {
+            const leftTopFile = document.getElementById('leftTop').files[0];
+            const rightTopFile = document.getElementById('rightTop').files[0];
+            const leftBottomFile = document.getElementById('leftBottom').files[0];
+            const rightBottomFile = document.getElementById('rightBottom').files[0];
+
+            // Load CSV data
+            if (leftTopFile) allBars.leftTop = await loadCSVData(leftTopFile);
+            if (rightTopFile) allBars.rightTop = await loadCSVData(rightTopFile);
+            if (leftBottomFile) allBars.leftBottom = await loadCSVData(leftBottomFile);
+            if (rightBottomFile) allBars.rightBottom = await loadCSVData(rightBottomFile);
+
+            // Initialize charts with custom titles
+            createChart("chart_left_top", allBars.leftTop, "CE Data");
+            createChart("chart_right_top", allBars.rightTop, "SPOT Data");
+            createChart("chart_left_bottom", allBars.leftBottom, "PE Data");
+            createChart("chart_right_bottom", allBars.rightBottom, "RHEL Data");
+
+            // Switch view from form to charts
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('chartSection').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
